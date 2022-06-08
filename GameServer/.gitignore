@@ -1,0 +1,6 @@
+environment.json
+pyvenv.cfg
+bin/
+lib/
+include/
+__pycache__/
