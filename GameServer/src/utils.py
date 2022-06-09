@@ -8,7 +8,7 @@ def open_environment() -> dict:
         return json.load(f)
 
 def send_data(connection: socket.socket, fernet: Fernet, message: str) -> None:
-    connection.send(fernet.encrypt(bytes(message)))
+    connection.send(fernet.encrypt(bytes(message, "utf-8")))
 
 def receive_data(connection: socket.socket, fernet: Fernet, length: int = 2048) -> str:
     return fernet.decrypt(connection.recv(length)).decode("utf-8")

@@ -7,7 +7,7 @@ from database import Database
 
 
 class Server():
-    def __init__(self, env_config: dict) -> None:
+    def __init__(self) -> None:
         self.env_config: dict = utils.open_environment()
         
         self.sock: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

@@ -18,6 +18,16 @@ class UserHandler():
         self.fernet = Fernet(self.env_config["key"])
     
     def handler(self) -> None:
+        version_check: str = receive_data(self.connection, self.fernet).split("|")
+        if len(version_check) != 2: 
+            send_data(self.connection, self.fernet, "--version_FAIL")
+        elif version_check[0] != "--version":
+            send_data(self.connection, self.fernet, "--version_FAIL")
+        elif version_check[1] != self.env_config["version"]:
+            send_data(self.connection, self.fernet, "--version_FAIL")
+        else:
+            send_data(self.connection, self.fernet, "--version_OK")
+
         while True:
             data: str = receive_data(self.connection, self.fernet)
             data: List[str] = data.split("|")
