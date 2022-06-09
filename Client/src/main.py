@@ -1,4 +1,4 @@
 if __name__ == "__main__":
-    import login.login_utils as login
+    from login.login_utils import Login
 
-    login.Login()
+    Login()

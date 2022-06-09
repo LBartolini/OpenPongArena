@@ -3,14 +3,16 @@ from tkinter import messagebox
 import utils
 import socket
 from cryptography.fernet import Fernet
-from game import Game
+import os
+import game.game as game
 
 
 class Login:
     def __init__(self):
         self.root: tk.Tk = tk.Tk()
         self.root.title("OpenPongArena - Login")
-        #  self.root.iconbitmap(r"..\..\assets\icon.ico")
+        self.root.iconbitmap(os.path.join(os.path.dirname(
+            __file__), "..", "..", "assets", "icon.ico"))
         self.root.geometry("{}x{}".format(
             utils.WINDOW_WIDTH, utils.WINDOW_HEIGHT))
         self.root.resizable(False, False)
@@ -21,6 +23,7 @@ class Login:
         self.bind_socket()
 
         if self.connected:
+            self.check_version()
             self.init_login_window()
             self.root.mainloop()
         else:
@@ -57,9 +60,27 @@ class Login:
             self.current_tries += 1
             self.connection_label.destroy()
 
+    def check_version(self):
+        # send version to server and wait for response
+        f = Fernet(utils.get_fernet_key())
+        self.sock.send(
+            f.encrypt(bytes("--version|{}".format(utils.get_version()), "utf-8")))
+        response = f.decrypt(self.sock.recv(1024)).decode("utf-8")
+        if response != "--version_OK":
+            messagebox.showerror(
+                "Error", "The client version is outdated, please update the client.")
+            self.quit()
+
     def init_login_window(self):
         self.login_window = tk.Frame(self.root)
         self.login_window.pack(fill=tk.BOTH, expand=True)
+
+        self.title = tk.Label(
+            self.login_window, text="OpenPongArena", font=("Arial", 30))
+        self.subtitle = tk.Label(
+            self.login_window, text="Login", font=('Arial', 20))
+        self.title.pack(fill=tk.X, expand=True, padx=5)
+        self.subtitle.pack(fill=tk.BOTH, expand=True, padx=5)
 
         self.username_entry = tk.Entry(self.login_window)
         self.username_entry.insert(0, "Username")
@@ -70,7 +91,8 @@ class Login:
         # if enter is pressed, focus on pwd entry
         self.username_entry.bind(
             '<Return>', lambda event: self.password_entry.focus())
-        self.username_entry.pack(fill=tk.X, expand=True)
+        self.username_entry.pack(
+            fill=tk.X, expand=True, padx=int(utils.WINDOW_WIDTH / 4))
 
         self.password_entry = tk.Entry(self.login_window)
         self.password_entry.insert(0, "Password")
@@ -80,11 +102,13 @@ class Login:
             0, "Password") if self.password_entry.get() == "" else None)
         # if enter is pressed, login
         self.password_entry.bind('<Return>', lambda event: self.login())
-        self.password_entry.pack(fill=tk.X, expand=True)
+        self.password_entry.pack(
+            fill=tk.X, expand=True, padx=int(utils.WINDOW_WIDTH / 4))
 
         self.login_button = tk.Button(
             self.login_window, text="Login", command=self.login)
-        self.login_button.pack(fill=tk.X, expand=True)
+        self.login_button.pack(fill=tk.X, expand=True,
+                               padx=int(utils.WINDOW_WIDTH / 3))
 
     def login(self):
         username: str = self.username_entry.get()
@@ -103,11 +127,14 @@ class Login:
             self.sock.send(
                 f.encrypt(bytes("--login|{}|{}".format(username, password), "utf-8")))
             response = f.decrypt(self.sock.recv(1024)).decode("utf-8")
-            if response == "--login_success":
+            response = response.split('|')
+            if response[0] == "--login_success":
+                # --login_success|<elo>
                 # start game
+                elo = float(response[1])
                 self.root.destroy()
-                Game(username=username, socket=self.sock)
-            elif response == "--login_failure":
+                game.Game(username=username, elo=elo, socket=self.sock)
+            elif response[0] == "--login_failure":
                 messagebox.showerror("Error", "Invalid username or password.")
             else:
                 messagebox.showerror("Error", "An unknown error occurred.")
@@ -116,7 +143,7 @@ class Login:
         if self.connected:
             f = Fernet(utils.get_fernet_key())
             # --quit
-            self.sock.send(f.encrypt(bytes("--quit"), "utf-8"))
-            self.sock.send()
+            self.sock.send(f.encrypt(bytes("--quit", "utf-8")))
             self.sock.close()
         self.root.destroy()
+        exit(0)

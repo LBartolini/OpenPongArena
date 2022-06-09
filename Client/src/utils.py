@@ -20,5 +20,12 @@ def get_fernet_key() -> bytes:
     return bytes(open_environment()['Key'], 'utf-8')
 
 
+def get_version() -> str:
+    """
+    Get the version from the environment file.
+    """
+    return open_environment()['Version']
+
+
 if __name__ == '__main__':
     print(open_environment()['Version'])
