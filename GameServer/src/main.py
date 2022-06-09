@@ -4,6 +4,7 @@ from user import UserHandler
 from typing import List
 import utils
 from database import Database
+from matchmaking import  Matchmaking
 
 
 class Server():
@@ -20,12 +21,17 @@ class Server():
         self.sock.listen(1)
 
         self.database = Database(self.env_config['DB'])
+        self.matchmaking = Matchmaking()
         print("Listening...")
 
     def run(self) -> None:
         '''
-        Initial connection from Client to the Server
+        Handles initial connection from Client to the Server
         '''
+        cThread = threading.Thread(target=self.matchmaking.handle_matchmaking, args=())
+        cThread.deamon = True
+        cThread.start()
+
         while True:
             ret: tuple[socket.socket, socket._RetAddress] = self.sock.accept()
             connection: socket.socket = ret[0]

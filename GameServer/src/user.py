@@ -1,35 +1,38 @@
 import socket
-from cryptography.fernet import Fernet
 from typing import List
 from database import Database
 from utils import *
 
 class UserHandler():
+    IDLE: int = 0
+    MATCHMAKING: int = 1
+    PLAYING: int = 2
+
     def __init__(self, connection: socket.socket, env_config: dict, database: Database) -> None:
         self.username: str = ""
         self.elo = -1
         
         self.logged: bool = False
         self.connected: bool = True
+        self.status: int = self.IDLE # 0=nothing, 1=matchmaking, 2=playing
         
         self.database: Database = database
         self.env_config: dict = env_config
         self.connection: socket  = connection
-        self.fernet = Fernet(self.env_config["key"])
     
     def handler(self) -> None:
-        version_check: str = receive_data(self, self.fernet).split("|")
+        version_check: str = receive_data(self).split("|")
         if len(version_check) != 2: 
-            send_data(self, self.fernet, "--version_FAIL")
+            send_data(self, "--version_FAIL")
         elif version_check[0] != "--version":
-            send_data(self, self.fernet, "--version_FAIL")
+            send_data(self, "--version_FAIL")
         elif version_check[1] != self.env_config["version"]:
-            send_data(self, self.fernet, "--version_FAIL")
+            send_data(self, "--version_FAIL")
         else:
-            send_data(self, self.fernet, "--version_OK")
+            send_data(self, "--version_OK")
 
         while True:
-            data: str = receive_data(self, self.fernet)
+            data: str = receive_data(self)
             data: List[str] = data.split("|")
 
             if data[0] == "--quit": 
@@ -37,9 +40,9 @@ class UserHandler():
 
             elif data[0] == "--login" and len(data) == 3:
                 if self.login(data[1], data[2]):
-                    send_data(self, self.fernet, "--login_success|{:.2f}".format(self.elo))
+                    send_data(self, "--login_success|{:.2f}".format(self.elo))
                 else:
-                    send_data(self, self.fernet, "--login_failure")
+                    send_data(self, "--login_failure")
 
     def login(self, username: str, password: str) -> None:
         res, elo = self.database.verify_user(username, password)
