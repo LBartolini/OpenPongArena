@@ -1,42 +1,45 @@
 import socket
 from cryptography.fernet import Fernet
 from typing import List
+from database import Database
+from utils import *
 
 class UserHandler():
-    def __init__(self, connection: socket.socket, env_config: dict) -> None:
-        self.id: int = -1
+    def __init__(self, connection: socket.socket, env_config: dict, database: Database) -> None:
         self.username: str = ""
+        self.elo = -1
         
         self.logged: bool = False
         self.connected: bool = True
         
+        self.database: Database = database
         self.env_config: dict = env_config
         self.connection: socket  = connection
         self.fernet = Fernet(self.env_config["key"])
     
     def handler(self) -> None:
         while True:
-            data: str = self.fernet.decrypt(self.connection.recv(4096)).decode("utf-8")
+            data: str = receive_data(self.connection, self.fernet)
             data: List[str] = data.split("|")
 
             if data[0] == "--quit": 
                 self.close()
 
             elif data[0] == "--login" and len(data) == 3:
-                res: bool = self.login(data[1], data[2]) # username, password
-                print(res)
+                if self.login(data[1], data[2]):
+                    send_data(self.connection, self.fernet, "--login_success|{:.2f}".format(self.elo))
+                else:
+                    send_data(self.connection, self.fernet, "--login_failure")
 
     def login(self, username: str, password: str) -> None:
-        if not self.verify_user(): 
+        res, elo = self.database.verify_user(username, password)
+        if not res: 
             return False
         
         self.logged = True
-        #TODO fetch info from db
+        self.username = username
+        self.elo = elo
         return True
-
-    def verify_user(self, username: str, password: str) -> bool:
-        # T=success, F=failure
-        return False
     
     def close(self) -> None:
         self.connected = False

@@ -2,5 +2,7 @@ environment.json
 pyvenv.cfg
 bin/
 lib/
+lib64
 include/
 __pycache__/
+share/

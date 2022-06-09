@@ -1,0 +1,9 @@
+autopep8==1.6.0
+cffi==1.15.0
+cryptography==37.0.2
+mysql-connector-python==8.0.29
+protobuf==4.21.1
+pycodestyle==2.8.0
+pycparser==2.21
+toml==0.10.2
+Werkzeug==2.1.2
