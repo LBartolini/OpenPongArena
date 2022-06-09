@@ -18,18 +18,18 @@ class UserHandler():
         self.fernet = Fernet(self.env_config["key"])
     
     def handler(self) -> None:
-        version_check: str = receive_data(self.connection, self.fernet).split("|")
+        version_check: str = receive_data(self, self.fernet).split("|")
         if len(version_check) != 2: 
-            send_data(self.connection, self.fernet, "--version_FAIL")
+            send_data(self, self.fernet, "--version_FAIL")
         elif version_check[0] != "--version":
-            send_data(self.connection, self.fernet, "--version_FAIL")
+            send_data(self, self.fernet, "--version_FAIL")
         elif version_check[1] != self.env_config["version"]:
-            send_data(self.connection, self.fernet, "--version_FAIL")
+            send_data(self, self.fernet, "--version_FAIL")
         else:
-            send_data(self.connection, self.fernet, "--version_OK")
+            send_data(self, self.fernet, "--version_OK")
 
         while True:
-            data: str = receive_data(self.connection, self.fernet)
+            data: str = receive_data(self, self.fernet)
             data: List[str] = data.split("|")
 
             if data[0] == "--quit": 
@@ -37,9 +37,9 @@ class UserHandler():
 
             elif data[0] == "--login" and len(data) == 3:
                 if self.login(data[1], data[2]):
-                    send_data(self.connection, self.fernet, "--login_success|{:.2f}".format(self.elo))
+                    send_data(self, self.fernet, "--login_success|{:.2f}".format(self.elo))
                 else:
-                    send_data(self.connection, self.fernet, "--login_failure")
+                    send_data(self, self.fernet, "--login_failure")
 
     def login(self, username: str, password: str) -> None:
         res, elo = self.database.verify_user(username, password)
