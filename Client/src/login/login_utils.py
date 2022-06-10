@@ -126,18 +126,23 @@ class Login:
             # --login|<username>|<password>
             self.sock.send(
                 f.encrypt(bytes("--login|{}|{}".format(username, password), "utf-8")))
-            response = f.decrypt(self.sock.recv(1024)).decode("utf-8")
-            response = response.split('|')
-            if response[0] == "--login_success":
-                # --login_success|<elo>
-                # start game
-                elo = float(response[1])
-                self.root.destroy()
-                game.Game(username=username, elo=elo, socket=self.sock)
-            elif response[0] == "--login_failure":
-                messagebox.showerror("Error", "Invalid username or password.")
-            else:
-                messagebox.showerror("Error", "An unknown error occurred.")
+            try:
+                response = f.decrypt(self.sock.recv(1024)).decode("utf-8")
+                response = response.split('|')
+                if response[0] == "--login_success":
+                    # --login_success|<elo>
+                    # start game
+                    elo = float(response[1])
+                    self.root.destroy()
+                    game.Game(username=username, elo=elo, socket=self.sock)
+                elif response[0] == "--login_failure":
+                    messagebox.showerror("Error", "Invalid username or password.")
+                else:
+                    messagebox.showerror("Error", "An unknown error occurred.")
+            except TimeoutError:
+                messagebox.showerror(
+                    "Error", "Server unexpectedly timed out, please try again later...")
+                self.quit()
 
     def quit(self):
         if self.connected:
