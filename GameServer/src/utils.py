@@ -1,4 +1,5 @@
 import os
+import socket
 import json
 from cryptography.fernet import Fernet
 
@@ -25,3 +26,22 @@ def receive_data(user, length: int = 2048) -> str:
         return x
     except Exception:
         user.close()
+
+def send_data_udp(udp_socket: socket.socket, destination: tuple[str, int], message: str) -> None:
+    global fernet
+
+    try:
+        udp_socket.sendto(fernet.encrypt(bytes(message, "utf-8")), destination)
+    except Exception:
+        print("failed")
+
+def receive_data_udp(udp_socket: socket.socket, length: int = 2048) -> tuple:
+    global fernet
+
+    try:
+        message, address = udp_socket.recvfrom(length)
+        x = fernet.decrypt(message).decode("utf-8")
+        
+        return x, address
+    except Exception:
+        return "", None

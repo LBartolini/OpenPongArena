@@ -1,7 +1,9 @@
 from threading import Lock
-import time
 from typing import List
+import time
 import random
+import socket
+from utils import send_data, send_data_udp
 import user_handler
 
 class Room():
@@ -30,6 +32,28 @@ class Room():
     def start_game(self):
         self.player_one.status = user_handler.UserHandler.PLAYING
         self.player_two.status = user_handler.UserHandler.PLAYING
+
+        send_data(self.player_one, f"--found|{self.player_two.username}|{self.player_two.elo}")
+        send_data(self.player_two, f"--found|{self.player_one.username}|{self.player_one.elo}")
+
+        dest_one = (self.player_one.connection.getpeername()[0], 4000)
+        dest_two = (self.player_two.connection.getpeername()[0], 4001)
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        
+        while True:
+            send_data_udp(udp_socket, dest_one, "Pippo")
+            send_data_udp(udp_socket, dest_two, "Pluto")
+            time.sleep(1.5)
+
+        # once client receive this, it should start two new threads
+        # 1. receive game updates from server and render them (port 4000)
+        # 2. wait for user input and send to server (port 4001)
+        # IMPORTANT: client should start these UDP sockets at startup to ensure that those ports are unused
+
+        # TODO start 3 threads
+        # 1. game: simulate the game and send the update to the clients
+        # 2. input_player_one: expects inputs from player one and updates game
+        # 3. input_player_two: expects inputs from player two and updates game
 
     def __str__(self) -> str:
         p1 = f"P1 [{self.player_one.username if self.player_one is not None else 'None'}]"
@@ -85,16 +109,21 @@ class Matchmaking():
         i = 0
         while True:
             print("check room ", i)
+            room = self.rooms[i]
             with self.mutex_waiting_players:
-                if not self.rooms[i].full() and len(self.waiting_players)>=2:
-                    self.fill_room(self.rooms[i])
-                    # TODO check if room is full then start the game
-                    print("fill room: "+str(self.rooms[i]))
+                if not room.full() and len(self.waiting_players)>=2:
+                    self.fill_room(room)
+                    if room.full():
+                        print("filled room: "+str(room))
+                        room.start_game()
+                    
 
             i = (i+1) % len(self.rooms)
             time.sleep(self.LOOP_WAIT)
 
     def add_waiting_player(self, player: user_handler.UserHandler) -> None:
+        if not player.logged: return
+
         with self.mutex_waiting_players:
             self.waiting_players.append(player)
             player.status = user_handler.UserHandler.MATCHMAKING
