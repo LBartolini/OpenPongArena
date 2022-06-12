@@ -1,17 +1,31 @@
-from threading import Lock
+from threading import Lock, Thread
 from typing import List
 import time
 import random
 import socket
-from utils import send_data, send_data_udp
+from utils import send_data, send_data_udp, receive_data_udp
 import user_handler
 
 class Room():
+    TICK: int = 1
+    GAME_PORT: int = 4000
+    INPUT_PORT: int = 4001
     
     def __init__(self) -> None:
+        self.playing: bool = False
+
         self.player_one: user_handler.UserHandler = None
         self.player_two: user_handler.UserHandler = None
-        self.n_players = 0
+        self.n_players: int = 0
+
+        self.buffer_one: List[int] = []
+        self.mutex_buffer_one: Lock = Lock()
+        self.buffer_two: List[int] = []
+        self.mutex_buffer_two: Lock = Lock()
+
+        self.udp_input_one = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.udp_input_two = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.udp_game = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
     def add_player(self, player: user_handler.UserHandler) -> None:
         if self.player_one is None and self.player_two is not player:
@@ -24,26 +38,97 @@ class Room():
     def full(self) -> bool:
         return self.player_one is not None and self.player_two is not None
 
+    def reset(self) -> None:
+        self.playing = False
+
+        self.player_one = None
+        self.player_two = None
+        self.n_players = 0
+
+        self.buffer_one = []
+        self.mutex_buffer_one = Lock()
+        self.buffer_two = []
+        self.mutex_buffer_two = Lock()
+
+        self.udp_input_one.close()
+        self.udp_input_two.close()
+        self.udp_game.close()
+
+        self.udp_input_one = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.udp_input_two = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.udp_game = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+
+
     def reset_room(self) -> None:
         self.player_one = None
         self.player_two = None
         self.n_players = 0
 
-    def start_game(self):
+    def add_action_one(self, action: int) -> None:
+        with self.mutex_buffer_one:
+            self.buffer_one.append(action)
+    
+    def pop_action_one(self) -> int:
+        with self.mutex_buffer_one:
+            x = self.buffer_one.pop(0) if len(self.buffer_one)>0 else -1
+        
+        return x
+    
+    def add_action_two(self, action: int) -> None:
+        with self.mutex_buffer_two:
+            self.buffer_two.append(action)
+    
+    def pop_action_two(self) -> int:
+        with self.mutex_buffer_two:
+            x = self.buffer_two.pop(0) if len(self.buffer_two)>0 else -1
+        
+        return x
+
+    def handle_input_one(self):
+        dest: tuple[str, int] = (self.player_one.connection.getpeername()[0], self.INPUT_PORT)
+        send_data_udp(self.udp_input_one, dest, "--init")
+
+        while self.playing:
+            msg, addr = receive_data_udp(self.udp_input_one)
+            if addr == dest:
+                self.add_action_one(msg)
+
+    def handle_input_two(self):
+        dest: tuple[str, int] = (self.player_two.connection.getpeername()[0], self.INPUT_PORT)
+        send_data_udp(self.udp_input_two, dest, "--init")
+
+        while self.playing:
+            msg, addr = receive_data_udp(self.udp_input_two)
+            if addr == dest:
+                self.add_action_two(msg)
+
+    def start_game(self) -> None:
         self.player_one.status = user_handler.UserHandler.PLAYING
         self.player_two.status = user_handler.UserHandler.PLAYING
+        self.playing = True
 
         send_data(self.player_one, f"--found|{self.player_two.username}|{self.player_two.elo}")
         send_data(self.player_two, f"--found|{self.player_one.username}|{self.player_one.elo}")
 
-        dest_one = (self.player_one.connection.getpeername()[0], 4000)
-        dest_two = (self.player_two.connection.getpeername()[0], 4001)
-        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        cThread = Thread(target=self.handle_input_one, args=())
+        cThread.deamon = True
+        cThread.start()
+
+        cThread = Thread(target=self.handle_input_two, args=())
+        cThread.deamon = True
+        cThread.start()
+
+        #dest_one = (self.player_one.connection.getpeername()[0], 4000)
+        #dest_two = (self.player_two.connection.getpeername()[0], 4001)
         
         while True:
-            send_data_udp(udp_socket, dest_one, "Pippo")
-            send_data_udp(udp_socket, dest_two, "Pluto")
-            time.sleep(1.5)
+            #send_data_udp(self.udp_game, dest_one, "Pippo")
+            #send_data_udp(self.udp_game, dest_two, "Pluto")
+            with (self.mutex_buffer_one, self.mutex_buffer_two):
+                print('\n1:', self.buffer_one)
+                print('2:', self.buffer_two)
+            
+            time.sleep(1/self.TICK)
 
         # once client receive this, it should start two new threads
         # 1. receive game updates from server and render them (port 4000)
@@ -62,7 +147,7 @@ class Room():
         return p1 + "vs" + p2
 
 class Matchmaking():
-    LOOP_WAIT: float = 1.0
+    LOOP_WAIT: float = 0.2
 
     ELO_TRIES: int = 5  # tries to go to the next level of range
     ELO_DIFFERENCE: List[int] = [50, 100, 300]
@@ -108,7 +193,6 @@ class Matchmaking():
         '''
         i = 0
         while True:
-            print("check room ", i)
             room = self.rooms[i]
             with self.mutex_waiting_players:
                 if not room.full() and len(self.waiting_players)>=2:
