@@ -40,6 +40,7 @@ class Login:
         MAX_TRIES: int = 5
         self.current_tries = 1
         while self.current_tries <= MAX_TRIES and not self.connected:
+            # recreating the socket because the timeout doesn't allow us to immediately trying to connect again
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.settimeout(utils.TIMEOUT)
             # delete previous connection label if it exists
@@ -53,10 +54,10 @@ class Login:
             except ConnectionRefusedError:
                 messagebox.showerror(
                     "Error", "Could not connect to server, please try again later.")
-                break
+                exit(0)
             except TimeoutError:
                 messagebox.showerror(
-                    "Error", "Server timed out, trying to connect again in {} seconds.".format(utils.TIMEOUT))
+                     "Error", "Server timed out, trying to connect again in {} seconds.".format(utils.TIMEOUT))
             self.current_tries += 1
             self.connection_label.destroy()
 
@@ -134,9 +135,10 @@ class Login:
                     # start game
                     elo = float(response[1])
                     self.root.destroy()
-                    game.Game(username=username, elo=elo, socket=self.sock)
+                    game.Game(username=username, elo=elo, sock=self.sock)
                 elif response[0] == "--login_failure":
-                    messagebox.showerror("Error", "Invalid username or password.")
+                    messagebox.showerror(
+                        "Error", "Invalid username or password.")
                 else:
                     messagebox.showerror("Error", "An unknown error occurred.")
             except TimeoutError:

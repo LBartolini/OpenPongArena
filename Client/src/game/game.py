@@ -8,11 +8,19 @@ import utils
 
 
 class Game:
-    def __init__(self, username: str, elo: float, socket: socket.socket) -> None:
+    def __init__(self, username: str, elo: float, sock: socket.socket) -> None:
         self.username: str = username
         self.elo: float = elo
-        self.sock: socket.socket = socket
+        self.sock: socket.socket = sock
         self.sock.settimeout(None)  # set the socket to blocking mode
+
+        self.input_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.game_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.input_socket.bind(('0.0.0.0', 4001))
+        self.game_socket.bind(('0.0.0.0', 4000))
+        self.input_dest: tuple[str, int] | None = None
+
+        self.sim = None
 
         pygame.init()
         self.screen: pygame.Surface = pygame.display.set_mode(
@@ -91,13 +99,51 @@ class Game:
 
     @draw
     def draw_game(self) -> None:
-        ...
+        b = self.sim.ball
+        paddle_left, paddle_right = self.sim.paddle_left, self.sim.paddle_right
+        user_info_w, user_info_h = self.font.size(self.user_info)
+        opponent_info = '{} ({})'.format(self.opponent[0], self.opponent[1])
+        opponent_info_w, opponent_info_h = self.font.size(opponent_info)
+        if self.player_side == '1':
+            # the user info must be displayed on the left side of the screen, and the opponent
+            # info must be displayed on the right side of the screen
+            self.screen.blit(self.font.render(self.user_info, True, game_utils.ColorPalette.WHITE),
+                             (user_info_w * 1/3, user_info_h * 4/3))
+            self.screen.blit(self.font.render(opponent_info, True, game_utils.ColorPalette.WHITE),
+                             (game_utils.Window.WIDTH - opponent_info_w - opponent_info_w * 1/3, opponent_info_h * 4/3))
+        else:
+            # the user info must be displayed on the right side of the screen, and the opponent
+            # info must be displayed on the left side of the screen
+            self.screen.blit(self.font.render(opponent_info, True, game_utils.ColorPalette.WHITE),
+                             (opponent_info_w * 1/3, opponent_info_h * 4/3))
+            self.screen.blit(self.font.render(self.user_info, True, game_utils.ColorPalette.WHITE),
+                             (game_utils.Window.WIDTH - user_info_w - user_info_w * 1/3, user_info_h * 4/3))
+        score = '{} - {}'.format(self.sim.score_left, self.sim.score_right)
+        score_w, score_h = self.font.size(score)
+        self.screen.blit(self.font.render(score, True, game_utils.ColorPalette.WHITE),
+                            (game_utils.Window.WIDTH / 2 - score_w / 2, score_h * 4/3))
 
-    @draw
+        # draw the ball
+        pygame.draw.circle(self.screen, game_utils.ColorPalette.WHITE,
+                           (int(b.pos_x), int(b.pos_y)), int(b.RADIUS))
+
+        # draw the paddles (we have to color the player paddle in green)
+        if self.player_side == '1':
+            pygame.draw.rect(self.screen, game_utils.ColorPalette.LIGHT_GREEN,
+                             (int(paddle_left.pos_x), int(paddle_left.pos_y), int(paddle_left.WIDTH), int(paddle_left.HEIGHT)))
+            pygame.draw.rect(self.screen, game_utils.ColorPalette.WHITE,
+                             (int(paddle_right.pos_x), int(paddle_right.pos_y), int(paddle_right.WIDTH), int(paddle_right.HEIGHT)))
+        else:
+            pygame.draw.rect(self.screen, game_utils.ColorPalette.WHITE,
+                             (int(paddle_left.pos_x), int(paddle_left.pos_y), int(paddle_left.WIDTH), int(paddle_left.HEIGHT)))
+            pygame.draw.rect(self.screen, game_utils.ColorPalette.LIGHT_GREEN,
+                             (int(paddle_right.pos_x), int(paddle_right.pos_y), int(paddle_right.WIDTH), int(paddle_right.HEIGHT)))
+
+    @ draw
     def draw_waiting_for_player(self):
         #  display on text "Waiting for another player to join..."
-        self.wait_text = "Waiting for another player to join..."
-        wait_width, wait_height = self.font.size(self.wait_text)
+        self.wait_text="Waiting for another player to join..."
+        wait_width, wait_height=self.font.size(self.wait_text)
         self.screen.blit(self.font.render(self.wait_text, True, game_utils.ColorPalette.WHITE), (
             game_utils.Window.WIDTH / 2 - wait_width / 2, game_utils.Window.HEIGHT / 2 - wait_height / 2))
 
@@ -105,18 +151,18 @@ class Game:
         while self.running:
             self.clock.tick(game_utils.Game.FPS)
             if self.is_home:
-                self.draw_home()
                 self.home_events()  # events handler for home screen
+                self.draw_home()
             elif self.is_waiting:
-                self.draw_waiting_for_player()
                 # start a thread that waits for the server to find an opponent
                 if self.found == -1:
                     threading.Thread(target=self.handle_match).start()
-                    self.found = 0
+                    self.found=0
                 self.waiting_events()  # events handler for waiting screen
+                self.draw_waiting_for_player()
             elif self.is_playing:
-                self.draw_game()
                 self.game_events()  # events handler for game screen
+                self.draw_game()
 
     def home_events(self) -> None:
         for event in pygame.event.get():
@@ -137,22 +183,44 @@ class Game:
                 self.quit()
 
     def game_events(self) -> None:
-        pass
+        action=('0', '0')
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.quit()
+            elif event.type == pygame.KEYDOWN:
+                if self.input_dest is not None:
+                    # 1: UP, -1: DOWN, 0: NO_ACTION
+                    if event.key == pygame.K_UP:
+                        utils.send_udp(self.input_socket, self.input_dest, '1')
+                        action=('1', '0') if self.player_side == '1' else (
+                            '0', '1')
+                    elif event.key == pygame.K_DOWN:
+                        utils.send_udp(self.input_socket,
+                                       self.input_dest, '-1')
+                        action=(
+                            '-1', '0') if self.player_side == '1' else ('0', '-1')
+        self.sim.simulate(action)
 
     def handle_match(self) -> None:
-        f = Fernet(utils.get_fernet_key())
+        f=Fernet(utils.get_fernet_key())
         #  Let the server know that we are searching for a match
         self.sock.send(f.encrypt('--searching'.encode()))
         #  Wait for the server to send us a match
         #  The client will receive a response like this...
-        #  --found|<opponent_username>|<opponent_elo>
+        #  --found|<player_one|player_two>|<opponent_username>|<opponent_elo>
 
         #  TODO: catch the exception (ConnectionAbortedError) if the user has quit the game
-        response = f.decrypt(self.sock.recv(1024)).decode()
-        self.opponent = (response.split('|')[1], float(response.split('|')[2]))
-        self.found = 1
+        response=f.decrypt(self.sock.recv(1024)).decode().split('|')
+        self.player_side=response[1]
+        # player_side == 1: left player
+        # player_side == 2: right player
+        self.opponent=(response[2], float(response[3]))
+        self.found=1
+
+        self.sim=game_utils.Simulation()
 
         self.start_game()
+        _, self.input_dest=utils.recv_udp(self.input_socket)
         while self.is_playing:
             if not self.running:
                 self.quit()
