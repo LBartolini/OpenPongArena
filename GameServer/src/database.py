@@ -24,3 +24,6 @@ class Database():
                 return False, 0
 
             return True, float(res[0][1])
+
+    def log_game(self, user1: str, user2: str, change1: float, change2: float) -> None:
+        pass

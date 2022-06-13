@@ -3,16 +3,19 @@ from typing import List
 import time
 import random
 import socket
-from utils import send_data, send_data_udp, receive_data_udp
+from utils import send_data, send_data_udp, receive_data_udp, expected_score
 from game_utils import *
 import user_handler
+from database import Database
 
 class Room():
     TICK: int = 71
     GAME_PORT: int = 4000
     INPUT_PORT: int = 4001
+    MAX_SCORE = 5
+    K_ELO = 20
     
-    def __init__(self) -> None:
+    def __init__(self, database: Database) -> None:
         self.playing: bool = False
 
         self.player_one: user_handler.UserHandler = None
@@ -24,6 +27,7 @@ class Room():
         self.buffer_two: List[int] = []
         self.mutex_buffer_two: Lock = Lock()
 
+        self.database = database
         self.simulation = Simulation()
 
         self.udp_input_one = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -42,7 +46,9 @@ class Room():
         return self.player_one is not None and self.player_two is not None
 
     def reset(self) -> None:
-        self.__init__()
+        self.player_one.status = user_handler.UserHandler.IDLE
+        self.player_two.status = user_handler.UserHandler.IDLE
+        self.__init__(self.database)
 
     def add_action_one(self, action: int) -> None:
         with self.mutex_buffer_one:
@@ -87,6 +93,34 @@ class Room():
         dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], self.GAME_PORT)
 
         while self.playing:
+            if self.simulation.score_left >= self.MAX_SCORE or not self.player_two.connected:
+                # vince player one
+                diff_one = expected_score(self.player_two.elo, self.player_one.elo)
+                diff_two = expected_score(self.player_one.elo, self.player_two.elo)
+                change_one = self.K_ELO * (1 - diff_one)
+                change_two = self.K_ELO * (0 - diff_two)
+
+                send_data_udp(self.udp_game, dest_one, f"--W|{change_one}")
+                send_data_udp(self.udp_game, dest_two, f"--L|{change_two}")
+
+                self.database.log_game(self.player_one.username, self.player_two.username, change_one, change_two)
+                self.reset()
+                return
+
+            elif self.simulation.score_right >= self.MAX_SCORE or not self.player_one.connected:
+                # vince player two
+                diff_one = expected_score(self.player_two.elo, self.player_one.elo)
+                diff_two = expected_score(self.player_one.elo, self.player_two.elo)
+                change_one = self.K_ELO * (0 - diff_one)
+                change_two = self.K_ELO * (1 - diff_two)
+
+                send_data_udp(self.udp_game, dest_one, f"--L|{change_one}")
+                send_data_udp(self.udp_game, dest_two, f"--W|{change_two}")
+
+                self.database.log_game(self.player_one.username, self.player_two.username, change_one, change_two)
+                self.reset()
+                return
+
             self.simulation.simulate([str(self.pop_action_one()), str(self.pop_action_two())])
             game_string = self.simulation.export_state()
             send_data_udp(self.udp_game, dest_one, game_string)
@@ -126,8 +160,8 @@ class Matchmaking():
     ELO_TRIES: int = 5  # tries to go to the next level of range
     ELO_DIFFERENCE: List[int] = [50, 100, 300]
 
-    def __init__(self, n_rooms: int = 20) -> None:
-        self.rooms: List[Room] = [Room() for _ in range(n_rooms)]
+    def __init__(self, database: Database, n_rooms: int = 20) -> None:
+        self.rooms: List[Room] = [Room(database) for _ in range(n_rooms)]
         self.waiting_players = []
 
         self.mutex_waiting_players = Lock()

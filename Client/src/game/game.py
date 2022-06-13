@@ -65,6 +65,11 @@ class Game:
         self.is_waiting = False
         self.is_playing = True
 
+    def go_home(self) -> None:
+        self.is_playing = False
+        self.is_home = True
+        self.init_home()
+
     def quit(self) -> None:
         self.running = False
         try:
@@ -229,6 +234,11 @@ class Game:
                 self.quit()
             else:
                 msg, _ = utils.recv_udp(self.game_socket)
+                if msg[:1] == '--':
+                    self.elo += float(msg.split('|')[1])
+                    self.go_home()
+                    break
+
                 self.sim.import_state(msg)
 
 

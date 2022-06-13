@@ -23,7 +23,7 @@ class Server():
         self.sock.listen(1)
 
         self.database = Database(self.env_config['DB'])
-        self.matchmaking = matchmaking.Matchmaking()
+        self.matchmaking = matchmaking.Matchmaking(self.database)
         print("Listening...")
 
     def search_connected_username(self, username) -> bool:

@@ -1,6 +1,7 @@
 import os
 import socket
 import json
+import math
 from cryptography.fernet import Fernet
 
 def open_environment() -> dict:
@@ -44,3 +45,8 @@ def receive_data_udp(udp_socket: socket.socket, length: int = 2048) -> tuple[str
         return x, address
     except Exception:
         return "", ()
+
+def expected_score(elo_player: float, elo_opponent: float) -> float:
+    difference = elo_opponent - elo_player
+    difference /= 400
+    return 1+10**difference
