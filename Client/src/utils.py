@@ -11,7 +11,7 @@ def open_environment() -> dict:
     """
     Open the environment file and return the data.
     """
-    with open(os.path.join(os.path.dirname(__file__), '..', 'environment.json')) as f:
+    with open(os.path.join(os.path.dirname(__file__), '..', 'environment.json'), 'r') as f:
         return json.load(f)
 
 

@@ -4,10 +4,11 @@ import time
 import random
 import socket
 from utils import send_data, send_data_udp, receive_data_udp
+from game_utils import *
 import user_handler
 
 class Room():
-    TICK: int = 60
+    TICK: int = 71
     GAME_PORT: int = 4000
     INPUT_PORT: int = 4001
     
@@ -22,6 +23,8 @@ class Room():
         self.mutex_buffer_one: Lock = Lock()
         self.buffer_two: List[int] = []
         self.mutex_buffer_two: Lock = Lock()
+
+        self.simulation = Simulation()
 
         self.udp_input_one = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_input_two = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -39,24 +42,7 @@ class Room():
         return self.player_one is not None and self.player_two is not None
 
     def reset(self) -> None:
-        self.playing = False
-
-        self.player_one = None
-        self.player_two = None
-        self.n_players = 0
-
-        self.buffer_one = []
-        self.mutex_buffer_one = Lock()
-        self.buffer_two = []
-        self.mutex_buffer_two = Lock()
-
-        self.udp_input_one.close()
-        self.udp_input_two.close()
-        self.udp_game.close()
-
-        self.udp_input_one = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        self.udp_input_two = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        self.udp_game = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.__init__()
 
     def add_action_one(self, action: int) -> None:
         with self.mutex_buffer_one:
@@ -101,9 +87,12 @@ class Room():
         dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], self.GAME_PORT)
 
         while self.playing:
-            # simulate(stato_attuale, self.pop_action_one, self.pop_action_two)
-            # send_data_udp(self.udp_game, dest_one, self.game.get_string())
-            pass
+            self.simulation.simulate([str(self.pop_action_one()), str(self.pop_action_two())])
+            game_string = self.simulation.export_state()
+            send_data_udp(self.udp_game, dest_one, game_string)
+            send_data_udp(self.udp_game, dest_two, game_string)
+
+            time.sleep(1/self.TICK)
 
     def start_game(self) -> None:
         self.player_one.status = user_handler.UserHandler.PLAYING
@@ -123,17 +112,7 @@ class Room():
 
         cThread = Thread(target=self.handle_game, args=())
         cThread.deamon = True
-        #cThread.start()
-
-        # once client receive this, it should start two new threads
-        # 1. receive game updates from server and render them (port 4000)
-        # 2. wait for user input and send to server (port 4001)
-        # IMPORTANT: client should start these UDP sockets at startup to ensure that those ports are unused
-
-        # TODO start 3 threads
-        # 1. game: simulate the game and send the update to the clients
-        # 2. input_player_one: expects inputs from player one and updates game
-        # 3. input_player_two: expects inputs from player two and updates game
+        cThread.start()
 
     def __str__(self) -> str:
         p1 = f"P1 [{self.player_one.username if self.player_one is not None else 'None'}]"

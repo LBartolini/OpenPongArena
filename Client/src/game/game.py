@@ -18,7 +18,7 @@ class Game:
         self.game_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.input_socket.bind(('0.0.0.0', 4001))
         self.game_socket.bind(('0.0.0.0', 4000))
-        self.input_dest: tuple[str, int] | None = None
+        self.input_dest: tuple[str, int] = None
 
         self.sim = None
 
@@ -32,7 +32,7 @@ class Game:
         self.title_font = pygame.font.SysFont('Arial', 45)
         self.font: pygame.font.Font = pygame.font.SysFont('Arial', 15)
 
-        self.opponent: tuple[str, int | float] | None = None
+        self.opponent: tuple[str, float] = None
         self.running: bool = True
         self.found: int = -1  # -1 == not found, 0 == searching, 1 == found
         self.is_home: bool = True
@@ -66,10 +66,13 @@ class Game:
         self.is_playing = True
 
     def quit(self) -> None:
-        f = Fernet(utils.get_fernet_key())
         self.running = False
-        self.sock.send(f.encrypt('--quit'.encode()))
-        self.sock.close()
+        try:
+            f = Fernet(utils.get_fernet_key())
+            self.sock.send(f.encrypt('--quit'.encode()))
+            self.sock.close()
+        except Exception:
+            pass
         pygame.quit()
         exit()
 
@@ -225,7 +228,8 @@ class Game:
             if not self.running:
                 self.quit()
             else:
-                pass
+                msg, _ = utils.recv_udp(self.game_socket)
+                self.sim.import_state(msg)
 
 
 if __name__ == '__main__':
