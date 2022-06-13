@@ -33,6 +33,10 @@ class Paddle:
         self.pos_x = self.start_pos
         self.pos_y = self.START_POSITION_Y
 
+    def set_coords(self, x: int, y: int) -> None:
+        self.pos_x = x
+        self.pos_y = y
+
     def get_position(self) -> tuple[int, int]:
         return self.pos_x, self.pos_y
 

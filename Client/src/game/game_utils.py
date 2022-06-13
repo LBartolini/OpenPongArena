@@ -33,6 +33,10 @@ class Paddle:
             self.start_pos = Window.WIDTH - self.WIDTH - self.PADDING
         self.pos_x = self.start_pos
         self.pos_y: float = self.START_POSITION_Y
+    
+    def set_coords(self, x: int, y: int) -> None:
+        self.pos_x = x
+        self.pos_y = y
 
     def move_up(self) -> None:
         if self.pos_y > 0:
