@@ -150,11 +150,12 @@ class Ball:
     def bounce(self, psx: Paddle, pdx: Paddle) -> None:
         # if the ball is touching the paddle, bounce it
         if psx.pos_x + psx.WIDTH >= self.pos_x - self.RADIUS and psx.pos_y + psx.HEIGHT >= self.pos_y >= psx.pos_y:
-            
+
             psx_center_y = psx.pos_y + psx.HEIGHT / 2
             intersect_y = psx_center_y - (self.pos_y - self.RADIUS)
             intersect_y /= psx.HEIGHT / 2
             self.angle = -(intersect_y * self.MAX_BOUNCE_ANGLE)
+            self.angle = int(self.angle)
             self.pos_x = psx.pos_x + Paddle.PADDING + self.RADIUS
         elif pdx.pos_x <= self.pos_x + self.RADIUS and pdx.pos_y + pdx.HEIGHT >= self.pos_y >= pdx.pos_y:
             # print(f'ball: {self.pos_x}, {self.pos_y}, {self.angle}, paddle: {pdx.pos_x}, {pdx.pos_y}')
@@ -162,6 +163,7 @@ class Ball:
             intersect_y = pdx_center_y - (self.pos_y - self.RADIUS)
             intersect_y /= pdx.HEIGHT / 2
             self.angle = -(180 - (intersect_y * self.MAX_BOUNCE_ANGLE))
+            self.angle = int(self.angle)
             self.pos_x = pdx.pos_x - Paddle.PADDING - self.RADIUS
 
     def reverse_angle(self):
@@ -203,3 +205,15 @@ class Simulation:
             self.paddle_right.move_up()
         elif paddle_actions[1] == "-1":
             self.paddle_right.move_down()
+
+    def export_state(self) -> str:
+        return f'{self.ball.pos_x},{self.ball.pos_y},{self.ball.angle},{self.paddle_left.pos_x},{self.paddle_left.pos_y},{self.paddle_right.pos_x},{self.paddle_right.pos_y},{self.score_left},{self.score_right}'
+
+    def import_state(self, state: str):
+        args = state.split(',')
+        self.ball.set_coords(int(args[0]), int(args[1]))
+        self.ball.angle = int(args[2])
+        self.paddle_left.set_coords(int(args[3]), int(args[4]))
+        self.paddle_right.set_coords(int(args[5]), int(args[6]))
+        self.score_left = int(args[7])
+        self.score_right = int(args[8])
