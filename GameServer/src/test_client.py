@@ -4,7 +4,7 @@ import utils
 import time
 
 config = utils.open_environment()
-fernet = Fernet(config['key'])
+fernet = Fernet(config['Key'])
 TICK = 1
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -12,13 +12,13 @@ sock.connect(('127.0.0.1', 5000))
 print("connected")
 
 udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-udp.bind(('0.0.0.0', 4000))
+udp.bind(('0.0.0.0', 4001))
 
 sock.send(fernet.encrypt(bytes("--version|0.0", "utf-8")))
 print(fernet.decrypt(sock.recv(1024)).decode("utf-8"))
 
-sock.send(fernet.encrypt(bytes("--login|cristian|Cristian#1", "utf-8")))
-#sock.send(fernet.encrypt(bytes("--login|cioncio|lorebart", "utf-8")))
+#sock.send(fernet.encrypt(bytes("--login|cristian|Cristian#1", "utf-8")))
+sock.send(fernet.encrypt(bytes("--login|cioncio|lorebart", "utf-8")))
 print(fernet.decrypt(sock.recv(1024)).decode("utf-8"))
 
 sock.send(fernet.encrypt(bytes("--searching", "utf-8")))

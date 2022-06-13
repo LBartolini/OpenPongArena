@@ -6,10 +6,10 @@ class Database():
 
     def __init__(self, db_config: dict) -> None:
         self.database = mysql.connector.connect(
-            host=db_config['host'],
-            user=db_config['user'],
-            password=db_config['pass'],
-            database=db_config['db']
+            host=db_config['Host'],
+            user=db_config['User'],
+            password=db_config['Pass'],
+            database=db_config['DB']
         )
 
     def verify_user(self, username: str, password: str) -> tuple[bool, float]:

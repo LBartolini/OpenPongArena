@@ -7,7 +7,7 @@ from utils import send_data, send_data_udp, receive_data_udp
 import user_handler
 
 class Room():
-    TICK: int = 1
+    TICK: int = 60
     GAME_PORT: int = 4000
     INPUT_PORT: int = 4001
     
@@ -58,19 +58,13 @@ class Room():
         self.udp_input_two = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_game = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
-
-    def reset_room(self) -> None:
-        self.player_one = None
-        self.player_two = None
-        self.n_players = 0
-
     def add_action_one(self, action: int) -> None:
         with self.mutex_buffer_one:
             self.buffer_one.append(action)
     
     def pop_action_one(self) -> int:
         with self.mutex_buffer_one:
-            x = self.buffer_one.pop(0) if len(self.buffer_one)>0 else -1
+            x = self.buffer_one.pop(0) if len(self.buffer_one)>0 else 0
         
         return x
     
@@ -80,7 +74,7 @@ class Room():
     
     def pop_action_two(self) -> int:
         with self.mutex_buffer_two:
-            x = self.buffer_two.pop(0) if len(self.buffer_two)>0 else -1
+            x = self.buffer_two.pop(0) if len(self.buffer_two)>0 else 0
         
         return x
 
@@ -102,13 +96,22 @@ class Room():
             if addr == dest:
                 self.add_action_two(msg)
 
+    def handle_game(self) -> None:
+        dest_one: tuple[str, int] = (self.player_one.connection.getpeername()[0], self.GAME_PORT)
+        dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], self.GAME_PORT)
+
+        while self.playing:
+            # simulate(stato_attuale, self.pop_action_one, self.pop_action_two)
+            # send_data_udp(self.udp_game, dest_one, self.game.get_string())
+            pass
+
     def start_game(self) -> None:
         self.player_one.status = user_handler.UserHandler.PLAYING
         self.player_two.status = user_handler.UserHandler.PLAYING
         self.playing = True
 
-        send_data(self.player_one, f"--found|{self.player_two.username}|{self.player_two.elo}")
-        send_data(self.player_two, f"--found|{self.player_one.username}|{self.player_one.elo}")
+        send_data(self.player_one, f"--found|1|{self.player_two.username}|{self.player_two.elo}")
+        send_data(self.player_two, f"--found|2|{self.player_one.username}|{self.player_one.elo}")
 
         cThread = Thread(target=self.handle_input_one, args=())
         cThread.deamon = True
@@ -118,17 +121,9 @@ class Room():
         cThread.deamon = True
         cThread.start()
 
-        #dest_one = (self.player_one.connection.getpeername()[0], 4000)
-        #dest_two = (self.player_two.connection.getpeername()[0], 4001)
-        
-        while True:
-            #send_data_udp(self.udp_game, dest_one, "Pippo")
-            #send_data_udp(self.udp_game, dest_two, "Pluto")
-            with (self.mutex_buffer_one, self.mutex_buffer_two):
-                print('\n1:', self.buffer_one)
-                print('2:', self.buffer_two)
-            
-            time.sleep(1/self.TICK)
+        cThread = Thread(target=self.handle_game, args=())
+        cThread.deamon = True
+        #cThread.start()
 
         # once client receive this, it should start two new threads
         # 1. receive game updates from server and render them (port 4000)

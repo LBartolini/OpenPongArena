@@ -1,14 +1,13 @@
 import os
 import socket
 import json
-import traceback
 from cryptography.fernet import Fernet
 
 def open_environment() -> dict:
     with open(os.path.join(os.path.dirname(__file__), '..', 'environment.json')) as f:
         return json.load(f)
 
-fernet = Fernet(open_environment()["key"])
+fernet = Fernet(open_environment()["Key"])
 
 def send_data(user, message: str) -> None:
     global fernet
@@ -40,12 +39,8 @@ def receive_data_udp(udp_socket: socket.socket, length: int = 2048) -> tuple[str
     global fernet
 
     try:
-        print("trying")
         message, address = udp_socket.recvfrom(length)
         x = fernet.decrypt(message).decode("utf-8")
-        print("ok")
         return x, address
     except Exception:
-        print("pippo")
-        traceback.print_exc()
         return "", ()

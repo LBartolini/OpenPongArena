@@ -16,8 +16,8 @@ class Server():
         self.connections: List[UserHandler] = []
         self.connections_lock = threading.Lock()
 
-        self.host: str = self.env_config["ip"]
-        self.port: int = self.env_config["port"]
+        self.host: str = self.env_config["IP"]
+        self.port: int = self.env_config["Port"]
         
         self.sock.bind((self.host, self.port))
         self.sock.listen(1)

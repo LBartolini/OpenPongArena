@@ -30,7 +30,7 @@ class UserHandler():
         elif version_check[0] != "--version":
             send_data(self, "--version_FAIL")
             self.close()
-        elif version_check[1] != self.env_config["version"]:
+        elif version_check[1] != self.env_config["Version"]:
             send_data(self, "--version_FAIL")
             self.close()
         else:
