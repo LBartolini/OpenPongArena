@@ -66,6 +66,7 @@ class Game:
         self.is_playing = True
 
     def go_home(self) -> None:
+        self.found = -1
         self.is_playing = False
         self.is_home = True
         self.init_home()
@@ -234,7 +235,7 @@ class Game:
                 self.quit()
             else:
                 msg, _ = utils.recv_udp(self.game_socket)
-                if msg[:1] == '--':
+                if msg[:2] == '--':
                     self.elo += float(msg.split('|')[1])
                     self.go_home()
                     break

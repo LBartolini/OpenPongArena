@@ -114,6 +114,8 @@ class Room():
                 change_one = self.K_ELO * (0 - diff_one)
                 change_two = self.K_ELO * (1 - diff_two)
 
+                print(change_one, change_two)
+
                 send_data_udp(self.udp_game, dest_one, f"--L|{change_one}")
                 send_data_udp(self.udp_game, dest_two, f"--W|{change_two}")
 
