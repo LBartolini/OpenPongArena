@@ -165,7 +165,7 @@ class Simulation:
 
     def export_state(self) -> str:
         with self.mutex:    
-            return f'{self.ball.pos_x},{self.ball.pos_y},{self.ball.angle},{self.paddle_left.pos_x},{self.paddle_left.pos_y},{self.paddle_right.pos_x},{self.paddle_right.pos_y},{self.score_left},{self.score_right}'
+            return f'{int(self.ball.pos_x)},{int(self.ball.pos_y)},{int(self.ball.angle)},{int(self.paddle_left.pos_x)},{int(self.paddle_left.pos_y)},{int(self.paddle_right.pos_x)},{int(self.paddle_right.pos_y)},{int(self.score_left)},{int(self.score_right)}'
 
     def import_state(self, state: str):
         with self.mutex:
