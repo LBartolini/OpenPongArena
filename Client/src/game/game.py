@@ -208,14 +208,14 @@ class Game:
                 self.won_events() # events handler for winning screen
                 self.draw_win()
                 self.timer += 1
-                if self.timer == game_utils.Game.WIN_TIME:
+                if self.timer >= game_utils.Game.WIN_TIME:
                     self.timer = 0
                     self.go_home()
             elif self.has_lost:
                 self.lost_events()
                 self.draw_lose()
                 self.timer += 1
-                if self.timer == game_utils.Game.LOSE_TIME:
+                if self.timer >= game_utils.Game.LOSE_TIME:
                     self.timer = 0
                     self.go_home()
 
