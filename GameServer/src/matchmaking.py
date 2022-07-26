@@ -96,7 +96,7 @@ class Room():
             if self.simulation.score_left >= self.MAX_SCORE or not self.player_two.connected:
                 # vince player one
                 diff_one = expected_score(self.player_two.elo, self.player_one.elo)
-                diff_two = expected_score(self.player_one.elo, self.player_two.elo)
+                diff_two = expected_score(self.player_two.elo, self.player_one.elo)
                 change_one = self.K_ELO * (1 - diff_one)
                 change_two = self.K_ELO * (0 - diff_two)
 
@@ -109,12 +109,10 @@ class Room():
 
             elif self.simulation.score_right >= self.MAX_SCORE or not self.player_one.connected:
                 # vince player two
-                diff_one = expected_score(self.player_two.elo, self.player_one.elo)
+                diff_one = expected_score(self.player_one.elo, self.player_two.elo)
                 diff_two = expected_score(self.player_one.elo, self.player_two.elo)
                 change_one = self.K_ELO * (0 - diff_one)
                 change_two = self.K_ELO * (1 - diff_two)
-
-                print(change_one, change_two)
 
                 send_data_udp(self.udp_game, dest_one, f"--L|{change_one}")
                 send_data_udp(self.udp_game, dest_two, f"--W|{change_two}")

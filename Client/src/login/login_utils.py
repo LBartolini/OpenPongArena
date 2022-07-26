@@ -11,8 +11,9 @@ class Login:
     def __init__(self):
         self.root: tk.Tk = tk.Tk()
         self.root.title("OpenPongArena - Login")
-        self.root.iconbitmap(os.path.join(os.path.dirname(
-            __file__), "..", "..", "assets", "icon.ico"))
+        photoimage = tk.PhotoImage(file = os.path.join(os.path.dirname(
+            __file__), "..", "..", "assets", "icon.png"))
+        self.root.iconphoto(False, photoimage)
         self.root.geometry("{}x{}".format(
             utils.WINDOW_WIDTH, utils.WINDOW_HEIGHT))
         self.root.resizable(False, False)
