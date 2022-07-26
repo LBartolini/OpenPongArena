@@ -49,4 +49,4 @@ def receive_data_udp(udp_socket: socket.socket, length: int = 2048) -> tuple[str
 def expected_score(elo_player: float, elo_opponent: float) -> float:
     difference = elo_opponent - elo_player
     difference /= 400
-    return 1+10**difference
+    return 1/(1+10**difference)
