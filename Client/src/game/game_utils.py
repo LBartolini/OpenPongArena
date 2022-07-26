@@ -10,6 +10,8 @@ class Window:
 
 class Game:
     FPS = 71
+    WIN_TIME = FPS * 3
+    LOSE_TIME = FPS * 3
 
 
 class ColorPalette:

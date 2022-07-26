@@ -15,6 +15,14 @@ def open_environment() -> dict:
         return json.load(f)
 
 
+def get_server() -> tuple[str, int]:
+    """
+    Get the server from the environment file.
+    """
+    d = open_environment()['Server']
+    return d['IP'], d['PORT']
+
+
 def get_fernet_key() -> bytes:
     """
     Get the fernet key from the environment file.
@@ -63,4 +71,4 @@ def get_version() -> str:
 
 
 if __name__ == '__main__':
-    print(open_environment()['Version'])
+    print(get_server())
