@@ -1,4 +1,6 @@
 import socket
+
+from GameServer.src.matchmaking import RENDEZVOUS
 from . import game_utils
 import pygame
 import os
@@ -7,6 +9,7 @@ from cryptography.fernet import Fernet
 import utils
 import time
 
+RENDEZVOUS = ('lbartolini.ddns.net', 9000)
 
 class Game:
     def __init__(self, username: str, elo: float, sock: socket.socket) -> None:
@@ -284,6 +287,9 @@ class Game:
         # player_side == 2: right player
         self.opponent = (response[2], float(response[3]))
         self.found = 1
+
+        self.input_socket.sendto(f"I|{self.username}", RENDEZVOUS)
+        self.game_socket.sendto(f"G|{self.username}", RENDEZVOUS)
 
         self.sim = game_utils.Simulation()
 
