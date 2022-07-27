@@ -11,20 +11,18 @@ client_requests = []
 def send_ports(client_a, client_b):
     global client_requests
 
-    sockfd.sendto(str(client_a[1][1]).encode("utf-8"), client_a[1])
-    sockfd.sendto(str(client_b[1][1]).encode("utf-8"), client_b[1])
+    sockfd.sendto(str(client_a[1][1]).encode("utf-8"), client_b[1])
+    sockfd.sendto(str(client_b[1][1]).encode("utf-8"), client_a[1])
 
 
 while True:
     data, addr = sockfd.recvfrom(32)
-    print("Connection from: " + str(addr))
     
     found = False
     for c in client_requests:
         if c[0] == data:
             client_requests.remove(c)
             send_ports((data, addr), c)
-            print("It's a Match!")
             found = True
             break
 
