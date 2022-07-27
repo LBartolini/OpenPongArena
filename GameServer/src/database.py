@@ -26,6 +26,7 @@ class Database():
             return True, float(res[0][1])
 
     def log_game(self, user1: str, user2: str, change1: float, change2: float) -> None:
+        return None
         with self.database.cursor() as cursor:
             sql = "INSERT INTO GameLog (PlayerOne, PlayerTwo, ChangeOne, ChangeTwo) VALUES (%s, %s, %s, %s)"
             cursor.execute(sql, (user1, user2, change1, change2))
