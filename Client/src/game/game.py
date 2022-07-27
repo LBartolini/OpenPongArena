@@ -298,8 +298,9 @@ class Game:
 
         server_ip = self.sock.getpeername()[0]
 
-        self.input_socket.sendto(b"0", (server_ip, input_port))
-        self.game_socket.sendto(b"0", (server_ip, game_port))
+        for _ in range(10):
+            self.input_socket.sendto(b"punch", (server_ip, input_port))
+            self.game_socket.sendto(b"punch", (server_ip, game_port))
 
         self.sim = game_utils.Simulation()
 

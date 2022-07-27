@@ -17,7 +17,7 @@ def send_ports(client_a, client_b):
 
 while True:
     data, addr = sockfd.recvfrom(32)
-    print("Connected "+addr)
+    print("Connected ", addr)
     sockfd.sendto(bytes("ack", "utf-8"), addr)
     
     found = False
