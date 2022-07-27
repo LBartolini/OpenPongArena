@@ -22,7 +22,7 @@ while True:
     found = False
     for c in client_requests:
         if c[0] == data:
-            client_requests.pop(c)
+            client_requests.remove(c)
             send_ports((data, addr), c)
             print("It's a Match!")
             found = True
