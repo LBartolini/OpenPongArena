@@ -14,15 +14,14 @@ while True:
     print("Connection from: " + str(addr))
 
     if len(client_requests) == 2:
-        break
+        client_a_ip = client_requests[0][0]
+        client_a_port = client_requests[0][1]
+        client_b_ip = client_requests[1][0]
+        client_b_port = client_requests[1][1]
 
-client_a_ip = client_requests[0][0]
-client_a_port = client_requests[0][1]
-client_b_ip = client_requests[1][0]
-client_b_port = client_requests[1][1]
+        message = ": "
 
-message = ": "
+        sockfd.sendto(str(client_a_ip).encode("utf-8") + message.encode("utf-8") + str(client_a_port).encode("utf-8"), client_requests[1])
+        sockfd.sendto(str(client_b_ip).encode("utf-8") + message.encode("utf-8") + str(client_b_port).encode("utf-8"), client_requests[0])
 
-sockfd.sendto(str(client_a_ip).encode("utf-8") + message.encode("utf-8") + str(client_a_port).encode("utf-8"), client_requests[1])
-sockfd.sendto(str(client_b_ip).encode("utf-8") + message.encode("utf-8") + str(client_b_port).encode("utf-8"), client_requests[0])
-sockfd.close()
+        client_requests = []
