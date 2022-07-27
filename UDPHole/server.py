@@ -13,7 +13,7 @@ def send_ports(client_a, client_b):
 
     print(client_a)
     print(client_b)
-    print("\n\n")
+    print("\n")
 
     sockfd.sendto(str(client_a[1][1]).encode("utf-8"), client_b[1])
     sockfd.sendto(str(client_b[1][1]).encode("utf-8"), client_a[1])

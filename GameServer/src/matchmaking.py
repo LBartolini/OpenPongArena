@@ -77,6 +77,7 @@ class Room():
     def handle_input_one(self):
         self.udp_input_one.sendto(bytes(f"I|{self.player_one.username}", 'utf-8'), RENDEZVOUS)
         self.udp_input_one.recvfrom(32) # ack
+        self.udp_input_one.recvfrom(32) # punch
 
         port = int(self.udp_input_one.recvfrom(32)[0])
 
@@ -93,6 +94,7 @@ class Room():
     def handle_input_two(self):
         self.udp_input_two.sendto(bytes(f"I|{self.player_two.username}", 'utf-8'), RENDEZVOUS)
         self.udp_input_two.recvfrom(32) # ack
+        self.udp_input_two.recvfrom(32) # punch
 
         port = int(self.udp_input_two.recvfrom(32)[0])
 
@@ -109,10 +111,12 @@ class Room():
     def handle_game(self) -> None:
         self.udp_game_one.sendto(bytes(f"G|{self.player_one.username}", 'utf-8'), RENDEZVOUS)
         self.udp_game_one.recvfrom(32) # ack
+        self.udp_game_one.recvfrom(32) # punch
         port_one = int(self.udp_game_one.recvfrom(32)[0])
 
         self.udp_game_two.sendto(bytes(f"G|{self.player_two.username}", 'utf-8'), RENDEZVOUS)
         self.udp_game_two.recvfrom(32) # ack
+        self.udp_game_two.recvfrom(32) # punch
         port_two = int(self.udp_game_two.recvfrom(32)[0])
 
         dest_one: tuple[str, int] = (self.player_one.connection.getpeername()[0], port_one)

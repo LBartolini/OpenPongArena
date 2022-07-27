@@ -293,8 +293,13 @@ class Game:
         self.input_socket.recvfrom(32) # ack
         self.game_socket.recvfrom(32) # ack
 
-        self.input_socket.recvfrom(32) # server port (useless)
-        self.game_socket.recvfrom(32) # server port (useless)
+        input_port = self.input_socket.recv(32).decode('utf-8') # server input port (useless)
+        game_port = self.game_socket.recv(32).decode('utf-8') # server game port (useless)
+
+        server_ip = self.sock.getpeername()
+
+        self.input_socket.sendto(b"0", (server_ip, input_port))
+        self.game_socket.sendto(b"0", (server_ip, game_port))
 
         self.sim = game_utils.Simulation()
 
