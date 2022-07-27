@@ -82,8 +82,9 @@ class Room():
 
         dest: tuple[str, int] = (self.player_one.connection.getpeername()[0], port)
 
-        for _ in range(10):
+        for _ in range(1000):
             self.udp_input_one.sendto(b"punch", dest) # punch
+            time.sleep(1)
 
         print(f"destinazione input_one {dest}")
         send_data_udp(self.udp_input_one, dest, "--init")
@@ -101,8 +102,9 @@ class Room():
 
         dest: tuple[str, int] = (self.player_two.connection.getpeername()[0], port)
         
-        for _ in range(10):
+        for _ in range(1000):
             self.udp_input_two.sendto(b"punch", dest) # punch
+            time.sleep(1)
 
         print(f"destinazione input_two {dest}")
         send_data_udp(self.udp_input_two, dest, "--init")
@@ -124,9 +126,10 @@ class Room():
         dest_one: tuple[str, int] = (self.player_one.connection.getpeername()[0], port_one)
         dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], port_two)
 
-        for _ in range(10):
+        for _ in range(1000):
             self.udp_game_one.sendto(b'punch', dest_one) # punch
             self.udp_game_two.sendto(b'punch', dest_two) # punch
+            time.sleep(1)
 
         print(f"destinazione game_one {dest_one}")
         print(f"destinazione game_two {dest_two}")
