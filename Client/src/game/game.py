@@ -293,8 +293,8 @@ class Game:
         self.input_socket.recvfrom(32) # ack
         self.game_socket.recvfrom(32) # ack
 
-        input_port = self.input_socket.recv(32).decode('utf-8') # server input port (useless)
-        game_port = self.game_socket.recv(32).decode('utf-8') # server game port (useless)
+        input_port = int(self.input_socket.recv(32).decode('utf-8')) # server input port (useless)
+        game_port = int(self.game_socket.recv(32).decode('utf-8')) # server game port (useless)
 
         server_ip = self.sock.getpeername()[0]
 
