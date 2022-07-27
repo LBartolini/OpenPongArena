@@ -287,8 +287,8 @@ class Game:
         self.opponent = (response[2], float(response[3]))
         self.found = 1
 
-        self.input_socket.sendto(f"I|{self.username}", RENDEZVOUS)
-        self.game_socket.sendto(f"G|{self.username}", RENDEZVOUS)
+        self.input_socket.sendto(bytes(f"I|{self.username}", 'utf-8'), RENDEZVOUS)
+        self.game_socket.sendto(bytes(f"G|{self.username}", 'utf-8'), RENDEZVOUS)
 
         self.sim = game_utils.Simulation()
 
