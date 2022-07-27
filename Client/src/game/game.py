@@ -1,6 +1,5 @@
 import socket
 
-from GameServer.src.matchmaking import RENDEZVOUS
 from . import game_utils
 import pygame
 import os
