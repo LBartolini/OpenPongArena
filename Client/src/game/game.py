@@ -298,6 +298,9 @@ class Game:
 
         server_ip = self.sock.getpeername()[0]
 
+        print((server_ip, input_port))
+        print((server_ip, game_port))
+
         self.input_socket.sendto(b"0", (server_ip, input_port))
         self.game_socket.sendto(b"0", (server_ip, game_port))
 
