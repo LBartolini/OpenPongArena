@@ -293,13 +293,10 @@ class Game:
         self.input_socket.recvfrom(32) # ack
         self.game_socket.recvfrom(32) # ack
 
-        input_port = int(self.input_socket.recv(32).decode('utf-8')) # server input port (useless)
-        game_port = int(self.game_socket.recv(32).decode('utf-8')) # server game port (useless)
+        input_port = int(self.input_socket.recv(32).decode('utf-8')) # server input port
+        game_port = int(self.game_socket.recv(32).decode('utf-8')) # server game port
 
         server_ip = self.sock.getpeername()[0]
-
-        print((server_ip, input_port))
-        print((server_ip, game_port))
 
         self.input_socket.sendto(b"0", (server_ip, input_port))
         self.game_socket.sendto(b"0", (server_ip, game_port))

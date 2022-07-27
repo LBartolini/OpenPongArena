@@ -76,12 +76,13 @@ class Room():
 
     def handle_input_one(self):
         self.udp_input_one.sendto(bytes(f"I|{self.player_one.username}", 'utf-8'), RENDEZVOUS)
-        self.udp_input_one.recvfrom(32) # ack
-        self.udp_input_one.recvfrom(32) # punch
+        print(self.udp_input_one.recvfrom(32)) # ack
 
         port = int(self.udp_input_one.recvfrom(32)[0])
 
         dest: tuple[str, int] = (self.player_one.connection.getpeername()[0], port)
+
+        self.udp_input_one.sendto(b"0", dest) # punch
 
         print(f"destinazione input_one {dest}")
         send_data_udp(self.udp_input_one, dest, "--init")
@@ -94,11 +95,12 @@ class Room():
     def handle_input_two(self):
         self.udp_input_two.sendto(bytes(f"I|{self.player_two.username}", 'utf-8'), RENDEZVOUS)
         self.udp_input_two.recvfrom(32) # ack
-        self.udp_input_two.recvfrom(32) # punch
 
         port = int(self.udp_input_two.recvfrom(32)[0])
 
         dest: tuple[str, int] = (self.player_two.connection.getpeername()[0], port)
+        
+        self.udp_input_two.sendto(b"0", dest) # punch
 
         print(f"destinazione input_two {dest}")
         send_data_udp(self.udp_input_two, dest, "--init")
@@ -111,16 +113,17 @@ class Room():
     def handle_game(self) -> None:
         self.udp_game_one.sendto(bytes(f"G|{self.player_one.username}", 'utf-8'), RENDEZVOUS)
         self.udp_game_one.recvfrom(32) # ack
-        self.udp_game_one.recvfrom(32) # punch
         port_one = int(self.udp_game_one.recvfrom(32)[0])
 
         self.udp_game_two.sendto(bytes(f"G|{self.player_two.username}", 'utf-8'), RENDEZVOUS)
         self.udp_game_two.recvfrom(32) # ack
-        self.udp_game_two.recvfrom(32) # punch
         port_two = int(self.udp_game_two.recvfrom(32)[0])
 
         dest_one: tuple[str, int] = (self.player_one.connection.getpeername()[0], port_one)
         dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], port_two)
+
+        self.udp_game_one.sendto(b'0', dest_one) # punch
+        self.udp_game_two.sendto(b'0', dest_two) # punch
 
         print(f"destinazione game_one {dest_one}")
         print(f"destinazione game_two {dest_two}")
