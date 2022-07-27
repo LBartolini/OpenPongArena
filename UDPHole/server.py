@@ -8,20 +8,24 @@ print("Listening on the port " + str(server_listening_port))
 
 client_requests = []
 
+def send_ports(client_a, client_b):
+    global client_requests
+
+    sockfd.sendto(str(client_a[1][1]).encode("utf-8"), client_a[1])
+    sockfd.sendto(str(client_b[1][1]).encode("utf-8"), client_b[1])
+
+
 while True:
     data, addr = sockfd.recvfrom(32)
-    client_requests.append(addr)
     print("Connection from: " + str(addr))
+    
+    found = False
+    for c in client_requests:
+        if c[0] == data:
+            client_requests.pop(c)
+            send_ports((data, addr), c)
+            print("It's a Match!")
+            found = True
+            break
 
-    if len(client_requests) == 2:
-        client_a_ip = client_requests[0][0]
-        client_a_port = client_requests[0][1]
-        client_b_ip = client_requests[1][0]
-        client_b_port = client_requests[1][1]
-
-        message = ": "
-
-        sockfd.sendto(str(client_a_ip).encode("utf-8") + message.encode("utf-8") + str(client_a_port).encode("utf-8"), client_requests[1])
-        sockfd.sendto(str(client_b_ip).encode("utf-8") + message.encode("utf-8") + str(client_b_port).encode("utf-8"), client_requests[0])
-
-        client_requests = []
+    if not found: client_requests.append((data, addr))
