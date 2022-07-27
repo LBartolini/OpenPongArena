@@ -296,7 +296,7 @@ class Game:
         input_port = self.input_socket.recv(32).decode('utf-8') # server input port (useless)
         game_port = self.game_socket.recv(32).decode('utf-8') # server game port (useless)
 
-        server_ip = self.sock.getpeername()
+        server_ip = self.sock.getpeername()[0]
 
         self.input_socket.sendto(b"0", (server_ip, input_port))
         self.game_socket.sendto(b"0", (server_ip, game_port))
