@@ -19,8 +19,8 @@ class Game:
 
         self.input_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.game_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.input_socket.bind(('0.0.0.0', 4001))
-        self.game_socket.bind(('0.0.0.0', 4000))
+        self.input_socket.bind(('0.0.0.0', 6001))
+        self.game_socket.bind(('0.0.0.0', 6000))
         self.input_dest: tuple[str, int] = None
 
         self.sim = None
