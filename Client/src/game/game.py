@@ -290,8 +290,11 @@ class Game:
         self.input_socket.sendto(bytes(f"I|{self.username}", 'utf-8'), RENDEZVOUS)
         self.game_socket.sendto(bytes(f"G|{self.username}", 'utf-8'), RENDEZVOUS)
 
-        self.input_socket.recvfrom(32)
-        self.game_socket.recvfrom(32)
+        self.input_socket.recvfrom(32) # ack
+        self.game_socket.recvfrom(32) # ack
+
+        self.input_socket.recvfrom(32) # server port (useless)
+        self.game_socket.recvfrom(32) # server port (useless)
 
         self.sim = game_utils.Simulation()
 

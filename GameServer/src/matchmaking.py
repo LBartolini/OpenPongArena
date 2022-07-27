@@ -34,7 +34,9 @@ class Room():
 
         self.udp_input_one = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         self.udp_input_two = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        self.udp_game = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+
+        self.udp_game_one = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        self.udp_game_two = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
 
     def add_player(self, player: user_handler.UserHandler) -> None:
         if self.player_one is None and self.player_two is not player:
@@ -74,6 +76,8 @@ class Room():
 
     def handle_input_one(self):
         self.udp_input_one.sendto(bytes(f"I|{self.player_one.username}", 'utf-8'), RENDEZVOUS)
+        self.udp_input_one.recvfrom(32) # ack
+
         port = int(self.udp_input_one.recvfrom(32)[0])
 
         dest: tuple[str, int] = (self.player_one.connection.getpeername()[0], port)
@@ -88,6 +92,8 @@ class Room():
 
     def handle_input_two(self):
         self.udp_input_two.sendto(bytes(f"I|{self.player_two.username}", 'utf-8'), RENDEZVOUS)
+        self.udp_input_two.recvfrom(32) # ack
+
         port = int(self.udp_input_two.recvfrom(32)[0])
 
         dest: tuple[str, int] = (self.player_two.connection.getpeername()[0], port)
@@ -101,11 +107,13 @@ class Room():
                 self.add_action_two(msg)
 
     def handle_game(self) -> None:
-        self.udp_game.sendto(bytes(f"G|{self.player_one.username}", 'utf-8'), RENDEZVOUS)
-        port_one = int(self.udp_game.recvfrom(32)[0])
+        self.udp_game_one.sendto(bytes(f"G|{self.player_one.username}", 'utf-8'), RENDEZVOUS)
+        self.udp_game_one.recvfrom(32) # ack
+        port_one = int(self.udp_game_one.recvfrom(32)[0])
 
-        self.udp_game.sendto(bytes(f"G|{self.player_two.username}", 'utf-8'), RENDEZVOUS)
-        port_two = int(self.udp_game.recvfrom(32)[0])
+        self.udp_game_two.sendto(bytes(f"G|{self.player_two.username}", 'utf-8'), RENDEZVOUS)
+        self.udp_game_two.recvfrom(32) # ack
+        port_two = int(self.udp_game_two.recvfrom(32)[0])
 
         dest_one: tuple[str, int] = (self.player_one.connection.getpeername()[0], port_one)
         dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], port_two)
@@ -122,8 +130,8 @@ class Room():
                 change_one = round(self.K_ELO * (1 - diff_one), 2)
                 change_two = round(self.K_ELO * (0 - diff_two), 2)
 
-                send_data_udp(self.udp_game, dest_one, f"--W|{change_one}")
-                send_data_udp(self.udp_game, dest_two, f"--L|{change_two}")
+                send_data_udp(self.udp_game_one, dest_one, f"--W|{change_one}")
+                send_data_udp(self.udp_game_two, dest_two, f"--L|{change_two}")
 
                 self.database.log_game(self.player_one.username, self.player_two.username, change_one, change_two)
                 self.reset()
@@ -137,8 +145,8 @@ class Room():
                 change_one = round(self.K_ELO * (0 - diff_one), 2)
                 change_two = round(self.K_ELO * (1 - diff_two), 2)
 
-                send_data_udp(self.udp_game, dest_one, f"--L|{change_one}")
-                send_data_udp(self.udp_game, dest_two, f"--W|{change_two}")
+                send_data_udp(self.udp_game_one, dest_one, f"--L|{change_one}")
+                send_data_udp(self.udp_game_two, dest_two, f"--W|{change_two}")
 
                 self.database.log_game(self.player_one.username, self.player_two.username, change_one, change_two)
                 self.reset()
@@ -146,8 +154,8 @@ class Room():
 
             self.simulation.simulate([str(self.pop_action_one()), str(self.pop_action_two())])
             game_string = self.simulation.export_state()
-            send_data_udp(self.udp_game, dest_one, game_string)
-            send_data_udp(self.udp_game, dest_two, game_string)
+            send_data_udp(self.udp_game_one, dest_one, game_string)
+            send_data_udp(self.udp_game_two, dest_two, game_string)
 
             time.sleep(1/self.TICK)
 

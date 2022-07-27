@@ -1,35 +1,5 @@
 import socket
 
-known_port = 50002
-
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind(('0.0.0.0', 9000))
-
-while True:
-    clients = []
-
-    while True:
-        data, address = sock.recvfrom(128)
-
-        print('connection from: {}'.format(address))
-        clients.append(address)
-
-        sock.sendto(b'ready', address)
-
-        if len(clients) == 2:
-            print('got 2 clients, sending details to each')
-            break
-
-    c1 = clients.pop()
-    c1_addr, c1_port = c1
-    c2 = clients.pop()
-    c2_addr, c2_port = c2
-
-    sock.sendto('{} {} {}'.format(c1_addr, c1_port, known_port).encode(), c2)
-    sock.sendto('{} {} {}'.format(c2_addr, c2_port, known_port).encode(), c1)
-
-'''import socket
-
 server_listening_port = 9000
 
 sockfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -41,12 +11,18 @@ client_requests = []
 def send_ports(client_a, client_b):
     global client_requests
 
+    print(client_a)
+    print(client_b)
+    print("\n\n")
+
     sockfd.sendto(str(client_a[1][1]).encode("utf-8"), client_b[1])
     sockfd.sendto(str(client_b[1][1]).encode("utf-8"), client_a[1])
 
 
 while True:
     data, addr = sockfd.recvfrom(32)
+
+    sockfd.sendto(bytes("ack", "utf-8"), addr)
     
     found = False
     for c in client_requests:
@@ -56,4 +32,4 @@ while True:
             found = True
             break
 
-    if not found: client_requests.append((data, addr))'''
+    if not found: client_requests.append((data, addr))
