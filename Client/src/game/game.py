@@ -1,11 +1,15 @@
 import socket
+
+from GameServer.src.matchmaking import RENDEZVOUS
 from . import game_utils
 import pygame
 import os
 import threading
 from cryptography.fernet import Fernet
 import utils
+import time
 
+RENDEZVOUS = ('lbartolini.ddns.net', 9000)
 
 class Game:
     def __init__(self, username: str, elo: float, sock: socket.socket) -> None:
@@ -31,6 +35,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.title_font = pygame.font.SysFont('Arial', 45)
         self.font: pygame.font.Font = pygame.font.SysFont('Arial', 15)
+        self.timer = 0
 
         self.opponent: tuple[str, float] = None
         self.running: bool = True
@@ -38,6 +43,8 @@ class Game:
         self.is_home: bool = True
         self.is_waiting: bool = False
         self.is_playing: bool = False
+        self.has_won = False
+        self.has_lost = False
         self.init_home()
         self.run()
 
@@ -65,8 +72,20 @@ class Game:
         self.is_waiting = False
         self.is_playing = True
 
+    def won(self) -> None:
+        # the player was playing
+        self.is_playing = False
+        self.has_won = True
+
+    def lost(self) -> None:
+        # the player was playing
+        self.is_playing = False
+        self.has_lost = True
+
     def go_home(self) -> None:
         self.found = -1
+        self.has_won = False
+        self.has_lost = False
         self.is_playing = False
         self.is_home = True
         self.init_home()
@@ -130,7 +149,7 @@ class Game:
         score = '{} - {}'.format(self.sim.score_left, self.sim.score_right)
         score_w, score_h = self.font.size(score)
         self.screen.blit(self.font.render(score, True, game_utils.ColorPalette.WHITE),
-                            (game_utils.Window.WIDTH / 2 - score_w / 2, score_h * 4/3))
+                         (game_utils.Window.WIDTH / 2 - score_w / 2, score_h * 4/3))
 
         # draw the ball
         pygame.draw.circle(self.screen, game_utils.ColorPalette.WHITE,
@@ -151,10 +170,26 @@ class Game:
     @ draw
     def draw_waiting_for_player(self):
         #  display on text "Waiting for another player to join..."
-        self.wait_text="Waiting for another player to join..."
-        wait_width, wait_height=self.font.size(self.wait_text)
+        self.wait_text = "Waiting for another player to join..."
+        wait_width, wait_height = self.font.size(self.wait_text)
         self.screen.blit(self.font.render(self.wait_text, True, game_utils.ColorPalette.WHITE), (
             game_utils.Window.WIDTH / 2 - wait_width / 2, game_utils.Window.HEIGHT / 2 - wait_height / 2))
+
+    @draw
+    def draw_win(self):
+        #  display on text "You won!"
+        self.win_text = "You Won!"
+        win_width, win_height = self.font.size(self.win_text)
+        self.screen.blit(self.font.render(self.win_text, True, game_utils.ColorPalette.WHITE), (
+            game_utils.Window.WIDTH / 2 - win_width / 2, game_utils.Window.HEIGHT / 2 - win_height / 2))
+
+    @draw
+    def draw_lose(self):
+        #  display on text "You lost!"
+        self.lose_text = "You Lost!"
+        lose_width, lose_height = self.font.size(self.lose_text)
+        self.screen.blit(self.font.render(self.lose_text, True, game_utils.ColorPalette.WHITE), (
+            game_utils.Window.WIDTH / 2 - lose_width / 2, game_utils.Window.HEIGHT / 2 - lose_height / 2))
 
     def run(self) -> None:
         while self.running:
@@ -166,12 +201,26 @@ class Game:
                 # start a thread that waits for the server to find an opponent
                 if self.found == -1:
                     threading.Thread(target=self.handle_match).start()
-                    self.found=0
+                    self.found = 0
                 self.waiting_events()  # events handler for waiting screen
                 self.draw_waiting_for_player()
             elif self.is_playing:
                 self.game_events()  # events handler for game screen
                 self.draw_game()
+            elif self.has_won:
+                self.won_events() # events handler for winning screen
+                self.draw_win()
+                self.timer += 1
+                if self.timer >= game_utils.Game.WIN_TIME:
+                    self.timer = 0
+                    self.go_home()
+            elif self.has_lost:
+                self.lost_events()
+                self.draw_lose()
+                self.timer += 1
+                if self.timer >= game_utils.Game.LOSE_TIME:
+                    self.timer = 0
+                    self.go_home()
 
     def home_events(self) -> None:
         for event in pygame.event.get():
@@ -192,7 +241,7 @@ class Game:
                 self.quit()
 
     def game_events(self) -> None:
-        action=('0', '0')
+        action = ('0', '0')
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.quit()
@@ -201,17 +250,30 @@ class Game:
                     # 1: UP, -1: DOWN, 0: NO_ACTION
                     if event.key == pygame.K_UP:
                         utils.send_udp(self.input_socket, self.input_dest, '1')
-                        action=('1', '0') if self.player_side == '1' else (
+                        action = ('1', '0') if self.player_side == '1' else (
                             '0', '1')
                     elif event.key == pygame.K_DOWN:
                         utils.send_udp(self.input_socket,
                                        self.input_dest, '-1')
-                        action=(
+                        action = (
                             '-1', '0') if self.player_side == '1' else ('0', '-1')
         self.sim.simulate(action)
 
+    def won_events(self):
+        # user will be prompted a winning screen for 3 seconds
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.quit()
+
+    def lost_events(self):
+        # user will be prompted a lose screen for 3 seconds
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.quit()
+            
+
     def handle_match(self) -> None:
-        f=Fernet(utils.get_fernet_key())
+        f = Fernet(utils.get_fernet_key())
         #  Let the server know that we are searching for a match
         self.sock.send(f.encrypt('--searching'.encode()))
         #  Wait for the server to send us a match
@@ -219,25 +281,33 @@ class Game:
         #  --found|<player_one|player_two>|<opponent_username>|<opponent_elo>
 
         #  TODO: catch the exception (ConnectionAbortedError) if the user has quit the game
-        response=f.decrypt(self.sock.recv(1024)).decode().split('|')
-        self.player_side=response[1]
+        response = f.decrypt(self.sock.recv(1024)).decode().split('|')
+        self.player_side = response[1]
         # player_side == 1: left player
         # player_side == 2: right player
-        self.opponent=(response[2], float(response[3]))
-        self.found=1
+        self.opponent = (response[2], float(response[3]))
+        self.found = 1
 
-        self.sim=game_utils.Simulation()
+        self.input_socket.sendto(f"I|{self.username}", RENDEZVOUS)
+        self.game_socket.sendto(f"G|{self.username}", RENDEZVOUS)
+
+        self.sim = game_utils.Simulation()
 
         self.start_game()
-        _, self.input_dest=utils.recv_udp(self.input_socket)
+        _, self.input_dest = utils.recv_udp(self.input_socket)
         while self.is_playing:
             if not self.running:
                 self.quit()
             else:
                 msg, _ = utils.recv_udp(self.game_socket)
                 if msg[:2] == '--':
+                    #  --W|new_elo or --L|new_elo
+                    result = msg.replace('--', '').split('|')[0] 
                     self.elo += float(msg.split('|')[1])
-                    self.go_home()
+                    if result == 'W':
+                        self.won()
+                    elif result == 'L':
+                        self.lost()
                     break
 
                 self.sim.import_state(msg)

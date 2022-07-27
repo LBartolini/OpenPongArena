@@ -8,6 +8,8 @@ from game_utils import *
 import user_handler
 from database import Database
 
+RENDEZVOUS = ('lbartolini.ddns.net', 9000)
+
 class Room():
     TICK: int = 71
     GAME_PORT: int = 4000
@@ -71,7 +73,10 @@ class Room():
         return x
 
     def handle_input_one(self):
-        dest: tuple[str, int] = (self.player_one.connection.getpeername()[0], self.INPUT_PORT)
+        self.udp_input_one.sendto(f"I|{self.player_one.username}", RENDEZVOUS)
+        port = int(self.udp_input_one.recvfrom(32))
+
+        dest: tuple[str, int] = (self.player_one.connection.getpeername()[0], port)
         send_data_udp(self.udp_input_one, dest, "--init")
 
         while self.playing:
@@ -80,7 +85,10 @@ class Room():
                 self.add_action_one(msg)
 
     def handle_input_two(self):
-        dest: tuple[str, int] = (self.player_two.connection.getpeername()[0], self.INPUT_PORT)
+        self.udp_input_two.sendto(f"I|{self.player_two.username}", RENDEZVOUS)
+        port = int(self.udp_input_two.recvfrom(32))
+
+        dest: tuple[str, int] = (self.player_two.connection.getpeername()[0], port)
         send_data_udp(self.udp_input_two, dest, "--init")
 
         while self.playing:
@@ -89,8 +97,14 @@ class Room():
                 self.add_action_two(msg)
 
     def handle_game(self) -> None:
-        dest_one: tuple[str, int] = (self.player_one.connection.getpeername()[0], self.GAME_PORT)
-        dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], self.GAME_PORT)
+        self.udp_game.sendto(f"G|{self.player_one.username}", RENDEZVOUS)
+        port_one = int(self.udp_game.recvfrom(32))
+
+        self.udp_game.sendto(f"G|{self.player_two.username}", RENDEZVOUS)
+        port_two = int(self.udp_game.recvfrom(32))
+
+        dest_one: tuple[str, int] = (self.player_one.connection.getpeername()[0], port_one)
+        dest_two: tuple[str, int] = (self.player_two.connection.getpeername()[0], port_two)
 
         while self.playing:
             if self.simulation.score_left >= self.MAX_SCORE or not self.player_two.connected:
